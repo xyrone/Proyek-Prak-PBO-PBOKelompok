@@ -2,7 +2,9 @@ package latihan.warnetku.model;
 
 import latihan.warnetku.exception.DataTidakValidException;
 
+/** Satu unit komputer di warnet. Aturan validasi ada di setter. */
 public class Komputer {
+
     private static final int PANJANG_NAMA_MAKS = 30;
 
     private int id;
@@ -11,6 +13,7 @@ public class Komputer {
     private int tarifPerJam;
     private StatusKomputer status;
 
+    /** Untuk data yang sudah ada di database. */
     public Komputer(int id, String nama, TipeKomputer tipe, int tarifPerJam, StatusKomputer status)
             throws DataTidakValidException {
         this.id = id;
@@ -20,6 +23,7 @@ public class Komputer {
         setStatus(status);
     }
 
+    /** Untuk komputer baru (belum punya id). */
     public Komputer(String nama, TipeKomputer tipe, int tarifPerJam, StatusKomputer status)
             throws DataTidakValidException {
         this(0, nama, tipe, tarifPerJam, status);

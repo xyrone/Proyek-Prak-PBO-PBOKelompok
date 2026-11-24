@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class KomputerDaoJdbc implements KomputerDao {
+
     private static final String KOLOM = "id, nama, tipe, tarif_per_jam, status";
 
     @Override
@@ -41,6 +42,7 @@ public class KomputerDaoJdbc implements KomputerDao {
 
     @Override
     public void ubah(Komputer k) throws WarnetException {
+        // Status DIPAKAI hanya diatur oleh sesi, jadi tidak boleh diubah manual dari sini.
         String sql = "UPDATE komputer SET nama = ?, tipe = ?, tarif_per_jam = ?, "
                 + "status = IF(status = 'DIPAKAI', 'DIPAKAI', ?) WHERE id = ?";
         try (Connection c = Koneksi.getInstance().getConnection();

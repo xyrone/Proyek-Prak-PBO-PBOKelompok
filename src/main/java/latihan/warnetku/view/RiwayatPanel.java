@@ -3,11 +3,15 @@ package latihan.warnetku.view;
 import latihan.warnetku.dao.SesiDao;
 import latihan.warnetku.dao.SesiDaoJdbc;
 import latihan.warnetku.model.Sesi;
+
 import javax.swing.table.DefaultTableModel;
+import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
 
 public class RiwayatPanel extends javax.swing.JPanel implements DapatDimuatUlang {
+
+    private static final long serialVersionUID = 1L;
 
     private final transient SesiDao dao = new SesiDaoJdbc();
     private transient List<Sesi> data = new ArrayList<>();
@@ -17,9 +21,17 @@ public class RiwayatPanel extends javax.swing.JPanel implements DapatDimuatUlang
         initComponents();
         ((java.awt.BorderLayout) getLayout()).setVgap(12);
         model = (DefaultTableModel) tabel.getModel();
-        Tampilan.rapikanTabel(tabel, 5, 6);
-        tabel.getColumnModel().getColumn(0).setPreferredWidth(200);
-        tabel.getColumnModel().getColumn(1).setPreferredWidth(140);
+
+        lblRingkasan.setFont(lblRingkasan.getFont().deriveFont(Font.BOLD, 14f));
+        lblRingkasan.setForeground(Tampilan.BIRU);
+
+        Tampilan.rapikanTabel(tabel);
+        tabel.getColumnModel().getColumn(6).setCellRenderer(new Tampilan.RenderTeks(javax.swing.SwingConstants.LEFT,
+                nilai -> "Berjalan".equals(nilai) ? Tampilan.ORANYE : Tampilan.HIJAU));
+        int[] lebar = {200, 140, 80, 190, 130, 110, 80};
+        for (int i = 0; i < lebar.length; i++) {
+            tabel.getColumnModel().getColumn(i).setPreferredWidth(lebar[i]);
+        }
         tabel.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 tampilkanDetail();
@@ -30,18 +42,15 @@ public class RiwayatPanel extends javax.swing.JPanel implements DapatDimuatUlang
     @Override
     public void muatUlang() {
         Tampilan.coba(this, () -> {
-            data = dao.cariSelesai();
+            data = dao.cariSemua();
             model.setRowCount(0);
-            long pendapatan = 0;
             for (Sesi s : data) {
-                model.addRow(new Object[]{s.getKode(), Tampilan.waktu(s.getWaktuSelesai()),
-                        s.getKomputer().getNama(), s.getNamaPelanggan(), s.getOperator().getNama(),
-                        Tampilan.durasi(s.getDurasiMenit()), Tampilan.rupiah(s.getTotal())});
-                pendapatan += s.getTotal();
+                model.addRow(new Object[]{s.getKode(), Tampilan.waktu(s.getWaktuMulai()),
+                        s.getKomputer().getNama(), s.getPelanggan().toString(), s.getPetugas().getNama(),
+                        Tampilan.lamaDetik(s.getDurasiDetik()), s.isBerjalan() ? "Berjalan" : "Selesai"});
             }
-            lblRingkasan.setText(data.size() + " sesi selesai  |  Total pendapatan: "
-                    + Tampilan.rupiah((int) Math.min(pendapatan, Integer.MAX_VALUE)));
-            txtDetail.setText(data.isEmpty() ? "Belum ada sesi yang selesai." : "Pilih baris untuk melihat detail sesi.");
+            lblRingkasan.setText(data.size() + " sesi");
+            txtDetail.setText(data.isEmpty() ? "Belum ada sesi." : "Pilih baris untuk melihat detail sesi.");
         });
     }
 
@@ -53,16 +62,16 @@ public class RiwayatPanel extends javax.swing.JPanel implements DapatDimuatUlang
         Sesi s = data.get(baris);
         StringBuilder sb = new StringBuilder();
         sb.append(baris("Kode sesi", s.getKode()));
+        sb.append(baris("Status", s.isBerjalan() ? "Berjalan" : "Selesai"));
         sb.append(baris("Komputer", s.getKomputer().getNama() + " (" + s.getKomputer().getTipe() + ")"));
-        sb.append(baris("Pelanggan", s.getNamaPelanggan()));
-        sb.append(baris("Operator", s.getOperator().getNama()));
+        sb.append(baris("Pelanggan", s.getPelanggan().toString()));
+        sb.append(baris("Petugas", s.getPetugas().getNama()));
         sb.append(baris("Mulai", Tampilan.waktu(s.getWaktuMulai())));
-        sb.append(baris("Selesai", Tampilan.waktu(s.getWaktuSelesai())));
-        sb.append(baris("Durasi tertagih", Tampilan.durasi(s.getDurasiMenit())));
-        sb.append(baris("Tarif per jam", Tampilan.rupiah(s.getTarifPerJam())));
-        sb.append(baris("Total", Tampilan.rupiah(s.getTotal())));
-        sb.append(baris("Uang bayar", Tampilan.rupiah(s.getBayar())));
-        sb.append(baris("Kembalian", Tampilan.rupiah(s.getKembalian())));
+        sb.append(baris("Jatah berakhir", Tampilan.waktu(s.getWaktuBerakhir())));
+        sb.append(baris("Ditutup", s.isBerjalan() ? "-" : Tampilan.waktu(s.getWaktuSelesai())));
+        sb.append(baris("Lama main", Tampilan.lamaDetik(s.getDurasiDetik())));
+        sb.append(baris("Dikembalikan", s.isBerjalan() ? "-"
+                : Tampilan.lamaDetik(s.getBillingKembaliDetik()) + " (ke billing " + s.getKomputer().getTipe() + ")"));
         txtDetail.setText(sb.toString());
         txtDetail.setCaretPosition(0);
     }
@@ -89,54 +98,60 @@ public class RiwayatPanel extends javax.swing.JPanel implements DapatDimuatUlang
         setLayout(new java.awt.BorderLayout());
 
         pnlAtas.setLayout(new java.awt.BorderLayout());
-        lblJudul.setFont(new java.awt.Font("Segoe UI", 1, 16));
+
+        lblJudul.setFont(new java.awt.Font("Segoe UI", 1, 16)); // NOI18N
         lblJudul.setText("Riwayat Sesi");
         pnlAtas.add(lblJudul, java.awt.BorderLayout.WEST);
-        lblRingkasan.setFont(new java.awt.Font("Segoe UI", 1, 14));
+
+        lblRingkasan.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         lblRingkasan.setForeground(new java.awt.Color(31, 78, 140));
         lblRingkasan.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblRingkasan.setText(" ");
         pnlAtas.add(lblRingkasan, java.awt.BorderLayout.CENTER);
+
         btnSegarkan.setText("Segarkan");
         btnSegarkan.setFocusPainted(false);
         btnSegarkan.setPreferredSize(new java.awt.Dimension(100, 32));
         btnSegarkan.addActionListener(this::btnSegarkanActionPerformed);
         pnlAtas.add(btnSegarkan, java.awt.BorderLayout.EAST);
+
         add(pnlAtas, java.awt.BorderLayout.NORTH);
+
+        pembagi.setBorder(null);
         pembagi.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
-        pembagi.setResizeWeight(0.5);
+        pembagi.setResizeWeight(0.4);
+
         tabel.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 
             },
             new String [] {
-                "Kode", "Tanggal", "Komputer", "Pelanggan", "Operator", "Durasi", "Total"
+                "Kode", "Mulai", "Komputer", "Pelanggan", "Petugas", "Lama", "Status"
             }
         ) {
-            Class[] types = new Class [] {
-                java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class
-            };
             boolean[] canEdit = new boolean [] {
                 false, false, false, false, false, false, false
             };
-
-            public Class getColumnClass(int columnIndex) {
-                return types [columnIndex];
-            }
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
                 return canEdit [columnIndex];
             }
         });
         spTabel.setViewportView(tabel);
+
         pembagi.setTopComponent(spTabel);
+
         spDetail.setBorder(javax.swing.BorderFactory.createTitledBorder("Detail sesi"));
-        spDetail.setPreferredSize(new java.awt.Dimension(100, 250));
+        spDetail.setPreferredSize(new java.awt.Dimension(100, 300));
+
         txtDetail.setEditable(false);
-        txtDetail.setFont(new java.awt.Font("Monospaced", 0, 13));
+        txtDetail.setColumns(20);
+        txtDetail.setFont(new java.awt.Font("Monospaced", 0, 13)); // NOI18N
         txtDetail.setMargin(new java.awt.Insets(8, 10, 8, 10));
         spDetail.setViewportView(txtDetail);
+
         pembagi.setBottomComponent(spDetail);
+
         add(pembagi, java.awt.BorderLayout.CENTER);
     }// </editor-fold>//GEN-END:initComponents
 

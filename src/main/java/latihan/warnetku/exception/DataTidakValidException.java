@@ -1,5 +1,6 @@
 package latihan.warnetku.exception;
 
+/** Input atau data tidak memenuhi aturan (kosong, negatif, duplikat, dsb). */
 public class DataTidakValidException extends WarnetException {
     private static final long serialVersionUID = 1L;
 

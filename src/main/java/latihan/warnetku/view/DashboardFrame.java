@@ -1,25 +1,25 @@
 package latihan.warnetku.view;
 
-import latihan.warnetku.model.Admin;
 import latihan.warnetku.model.Pengguna;
 import java.awt.Component;
 import java.awt.Dimension;
 
 public class DashboardFrame extends javax.swing.JFrame {
 
+    private static final long serialVersionUID = 1L;
+
     public DashboardFrame(Pengguna pengguna) {
         initComponents();
-        setTitle("Warnetku - " + pengguna.getNama() + " (" + pengguna.getRole() + ")");
-        lblAkun.setText(pengguna.getNama() + "  |  " + pengguna.getRole() + "   ");
-        if (pengguna instanceof Admin) {
-            tab.addTab("Komputer", new KomputerPanel());
-        } else {
-            tab.addTab("Sesi", new SesiPanel(pengguna));
-        }
+        setTitle("Warnetku - " + pengguna.getNama());
+        lblAkun.setText(pengguna.getNama() + "   ");
+        tab.addTab("Sesi", new SesiPanel(pengguna));
+        tab.addTab("Pelanggan", new PelangganPanel(pengguna));
+        tab.addTab("Komputer", new KomputerPanel());
         tab.addTab("Riwayat", new RiwayatPanel());
+        tab.addTab("Pendapatan", new PendapatanPanel());
         tab.addChangeListener(e -> muatUlangTabAktif());
         setMinimumSize(new Dimension(900, 560));
-        setSize(1020, 660);
+        setSize(1020, 720);
         setLocationRelativeTo(null);
         muatUlangTabAktif();
     }
@@ -52,7 +52,7 @@ public class DashboardFrame extends javax.swing.JFrame {
         pnlBar.setBackground(new java.awt.Color(31, 78, 140));
         pnlBar.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 16, 10, 16));
         pnlBar.setLayout(new java.awt.BorderLayout());
-        lblLogo.setFont(new java.awt.Font("Segoe UI", 1, 20));
+        lblLogo.setFont(new java.awt.Font("Segoe UI", 1, 20)); // NOI18N
         lblLogo.setForeground(new java.awt.Color(255, 255, 255));
         lblLogo.setText("Warnetku");
         pnlBar.add(lblLogo, java.awt.BorderLayout.WEST);

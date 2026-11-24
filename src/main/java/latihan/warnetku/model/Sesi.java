@@ -1,113 +1,116 @@
 package latihan.warnetku.model;
 
+import latihan.warnetku.exception.BillingKurangException;
 import latihan.warnetku.exception.DataTidakValidException;
-import latihan.warnetku.exception.UangBayarKurangException;
-import latihan.warnetku.exception.WarnetException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+/**
+ * Satu sesi pemakaian komputer oleh pelanggan. Lama main dipotong dari billing pelanggan saat
+ * sesi dimulai. Jika sesi diakhiri sebelum waktunya, sisa waktu dikembalikan ke billing.
+ */
 public class Sesi {
-    public static final int BLOK_MENIT = 15;
+
+    public static final int MENIT_MAKS = 24 * 60;
     private static final DateTimeFormatter FORMAT_KODE = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
 
     private int id;
-    private final String kode;
+    private String kode;
     private final Komputer komputer;
-    private final Pengguna operator;
-    private String namaPelanggan;
-    private final LocalDateTime waktuMulai;
+    private final Pengguna petugas;
+    private final Pelanggan pelanggan;
+    private LocalDateTime waktuMulai;
     private LocalDateTime waktuSelesai;
-    private int tarifPerJam;
     private int durasiMenit;
-    private int total;
-    private int bayar;
-    private int kembalian;
+    private int billingKembaliDetik;
 
-    public Sesi(Komputer komputer, Pengguna operator, String namaPelanggan)
+    /** Sesi baru. Waktu mulai yang sebenarnya dicatat saat DAO menyimpannya (lihat {@link #mulaiPada}). */
+    public Sesi(Komputer komputer, Pengguna petugas, Pelanggan pelanggan, int durasiMenit)
             throws DataTidakValidException {
         if (komputer == null) {
             throw new DataTidakValidException("Komputer wajib dipilih");
         }
-        if (operator == null) {
-            throw new DataTidakValidException("Operator tidak diketahui");
+        if (petugas == null) {
+            throw new DataTidakValidException("Petugas tidak diketahui");
+        }
+        if (pelanggan == null) {
+            throw new DataTidakValidException("Pelanggan wajib dipilih");
         }
         this.komputer = komputer;
-        this.operator = operator;
-        setNamaPelanggan(namaPelanggan);
-        LocalDateTime sekarang = LocalDateTime.now();
-        this.waktuMulai = sekarang.withNano(0);
-        this.tarifPerJam = komputer.getTarifPerJam();
-        this.kode = "WN" + sekarang.format(FORMAT_KODE) + String.format("%03d", komputer.getId());
+        this.petugas = petugas;
+        this.pelanggan = pelanggan;
+        setDurasiMenit(durasiMenit);
+        mulaiPada(LocalDateTime.now());
     }
 
-    public Sesi(int id, String kode, Komputer komputer, Pengguna operator, String namaPelanggan,
-                LocalDateTime waktuMulai, LocalDateTime waktuSelesai, int tarifPerJam,
-                int durasiMenit, int total, int bayar, int kembalian) throws DataTidakValidException {
+    /** Sesi yang dibaca dari database. */
+    public Sesi(int id, String kode, Komputer komputer, Pengguna petugas, Pelanggan pelanggan,
+                LocalDateTime waktuMulai, LocalDateTime waktuSelesai, int durasiMenit, int billingKembaliDetik) {
         this.id = id;
         this.kode = kode;
         this.komputer = komputer;
-        this.operator = operator;
-        setNamaPelanggan(namaPelanggan);
+        this.petugas = petugas;
+        this.pelanggan = pelanggan;
         this.waktuMulai = waktuMulai;
         this.waktuSelesai = waktuSelesai;
-        this.tarifPerJam = tarifPerJam;
         this.durasiMenit = durasiMenit;
-        this.total = total;
-        this.bayar = bayar;
-        this.kembalian = kembalian;
+        this.billingKembaliDetik = billingKembaliDetik;
     }
 
-    public int hitungDurasiMenit() {
-        return hitungDurasiMenit(waktuSelesai != null ? waktuSelesai : LocalDateTime.now());
+    /** Memastikan billing cukup untuk lama main sesi ini. */
+    public final void cekBilling(int billingDetik) throws BillingKurangException {
+        if (billingDetik < getDurasiDetik()) {
+            throw new BillingKurangException("Billing " + pelanggan.getNama() + " untuk komputer "
+                    + komputer.getTipe() + " hanya " + formatLama(billingDetik) + ", kurang dari "
+                    + formatLama(getDurasiDetik()) + ". Kurangi lama main atau isi billing dulu.");
+        }
     }
 
-    public int hitungDurasiMenit(LocalDateTime sampai) {
-        long detik = Math.max(0, Duration.between(waktuMulai, sampai).getSeconds());
-        long menit = (detik + 59) / 60;
-        long blok = Math.max(1, (menit + BLOK_MENIT - 1) / BLOK_MENIT);
-        return (int) (blok * BLOK_MENIT);
+    /** Menetapkan saat sesi benar-benar dimulai; kode sesi dibuat dari waktu ini. */
+    public final void mulaiPada(LocalDateTime waktu) {
+        this.waktuMulai = waktu.withNano(0);
+        this.kode = "WN" + waktu.format(FORMAT_KODE) + String.format("%03d", komputer.getId());
     }
 
-    public int hitungTotal() {
-        return biaya(hitungDurasiMenit());
+    public int getDurasiDetik() {
+        return durasiMenit * 60;
     }
 
-    private int biaya(int menit) {
-        return (int) Math.round((double) menit * tarifPerJam / 60.0);
+    /** Waktu jatah main habis (waktu mulai + lama main). */
+    public LocalDateTime getWaktuBerakhir() {
+        return waktuMulai.plusMinutes(durasiMenit);
     }
 
+    /** Sisa jatah main dalam detik; 0 jika sudah habis. */
+    public long hitungSisaDetik(LocalDateTime sekarang) {
+        return Math.max(0, Duration.between(sekarang, getWaktuBerakhir()).getSeconds());
+    }
+
+    public boolean isHabis(LocalDateTime sekarang) {
+        return hitungSisaDetik(sekarang) == 0;
+    }
+
+    /** Menutup sesi. Sisa waktu pada saat ini dikembalikan ke billing pelanggan. */
     public void selesai(LocalDateTime waktu) {
         this.waktuSelesai = waktu.withNano(0);
-        this.durasiMenit = hitungDurasiMenit(this.waktuSelesai);
-        this.total = biaya(durasiMenit);
-        this.bayar = 0;
-        this.kembalian = 0;
-    }
-
-    public int hitungKembalian(int uangBayar) throws UangBayarKurangException {
-        if (uangBayar < total) {
-            throw new UangBayarKurangException("Uang bayar kurang " + rupiah(total - uangBayar)
-                    + " dari total " + rupiah(total));
-        }
-        return uangBayar - total;
-    }
-
-    public void bayar(int uangBayar) throws WarnetException {
-        if (waktuSelesai == null) {
-            throw new DataTidakValidException("Sesi belum diselesaikan");
-        }
-        this.kembalian = hitungKembalian(uangBayar);
-        this.bayar = uangBayar;
-    }
-
-    private static String rupiah(int nilai) {
-        return "Rp " + java.text.NumberFormat.getIntegerInstance(java.util.Locale.forLanguageTag("id-ID")).format(nilai);
+        this.billingKembaliDetik = (int) hitungSisaDetik(waktuSelesai);
     }
 
     public boolean isBerjalan() {
         return waktuSelesai == null;
+    }
+
+    /** Contoh: 5400 detik menjadi "1 jam 30 menit". */
+    public static String formatLama(long detik) {
+        long menit = detik / 60;
+        long jam = menit / 60;
+        long sisaMenit = menit % 60;
+        if (jam == 0) {
+            return sisaMenit + " menit";
+        }
+        return sisaMenit == 0 ? jam + " jam" : jam + " jam " + sisaMenit + " menit";
     }
 
     public int getId() {
@@ -126,22 +129,12 @@ public class Sesi {
         return komputer;
     }
 
-    public Pengguna getOperator() {
-        return operator;
+    public Pengguna getPetugas() {
+        return petugas;
     }
 
-    public String getNamaPelanggan() {
-        return namaPelanggan;
-    }
-
-    public final void setNamaPelanggan(String namaPelanggan) throws DataTidakValidException {
-        if (namaPelanggan == null || namaPelanggan.isBlank()) {
-            throw new DataTidakValidException("Nama pelanggan wajib diisi");
-        }
-        if (namaPelanggan.trim().length() > 50) {
-            throw new DataTidakValidException("Nama pelanggan maksimal 50 karakter");
-        }
-        this.namaPelanggan = namaPelanggan.trim();
+    public Pelanggan getPelanggan() {
+        return pelanggan;
     }
 
     public LocalDateTime getWaktuMulai() {
@@ -152,27 +145,18 @@ public class Sesi {
         return waktuSelesai;
     }
 
-    public int getTarifPerJam() {
-        return tarifPerJam;
-    }
-
-    public final void setTarifPerJam(int tarifPerJam) {
-        this.tarifPerJam = tarifPerJam;
-    }
-
     public int getDurasiMenit() {
         return durasiMenit;
     }
 
-    public int getTotal() {
-        return total;
+    public final void setDurasiMenit(int durasiMenit) throws DataTidakValidException {
+        if (durasiMenit < 1 || durasiMenit > MENIT_MAKS) {
+            throw new DataTidakValidException("Lama main harus 1 menit sampai 24 jam");
+        }
+        this.durasiMenit = durasiMenit;
     }
 
-    public int getBayar() {
-        return bayar;
-    }
-
-    public int getKembalian() {
-        return kembalian;
+    public int getBillingKembaliDetik() {
+        return billingKembaliDetik;
     }
 }

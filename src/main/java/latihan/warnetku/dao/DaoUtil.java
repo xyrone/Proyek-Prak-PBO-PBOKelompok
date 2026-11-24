@@ -5,7 +5,9 @@ import latihan.warnetku.exception.WarnetException;
 
 import java.sql.SQLException;
 
+/** Penerjemah SQLException menjadi pesan yang dimengerti pengguna. */
 final class DaoUtil {
+
     static final int ERR_DUPLIKAT = 1062;
     static final int ERR_DIPAKAI_DATA_LAIN = 1451;
 
@@ -24,11 +26,13 @@ final class DaoUtil {
         return new WarnetException("Kesalahan database: " + e.getMessage(), e);
     }
 
+    /** Membatalkan transaksi tanpa menutupi exception aslinya. */
     static void rollbackDiam(java.sql.Connection c) {
         if (c != null) {
             try {
                 c.rollback();
             } catch (SQLException ignored) {
+                // exception aslinya lebih penting
             }
         }
     }
@@ -39,6 +43,7 @@ final class DaoUtil {
                 c.setAutoCommit(true);
                 c.close();
             } catch (SQLException ignored) {
+                // tidak ada yang bisa dilakukan
             }
         }
     }

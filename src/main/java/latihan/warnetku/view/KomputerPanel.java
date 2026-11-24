@@ -15,6 +15,9 @@ import java.util.List;
 
 public class KomputerPanel extends javax.swing.JPanel implements DapatDimuatUlang {
 
+    private static final int TARIF_REGULER = 5000;
+    private static final int TARIF_VIP = 8000;
+
     private final transient KomputerDao dao = new KomputerDaoJdbc();
     private transient List<Komputer> data = new ArrayList<>();
     private final DefaultTableModel model;
@@ -25,6 +28,9 @@ public class KomputerPanel extends javax.swing.JPanel implements DapatDimuatUlan
         model = (DefaultTableModel) tabel.getModel();
         cmbTipe.setModel(new DefaultComboBoxModel<>(TipeKomputer.values()));
         cmbStatus.setModel(new DefaultComboBoxModel<>(StatusKomputer.values()));
+        txtTarif.setEditable(false);
+        cmbTipe.addActionListener(e -> perbaruiTarif());
+        perbaruiTarif();
         Tampilan.rapikanTabel(tabel, 0, 3);
         tabel.getColumnModel().getColumn(4).setCellRenderer(new Tampilan.RenderTeks(SwingConstants.LEFT, nilai -> {
             if (nilai == StatusKomputer.TERSEDIA) {
@@ -73,7 +79,7 @@ public class KomputerPanel extends javax.swing.JPanel implements DapatDimuatUlan
         }
         txtNama.setText(k.getNama());
         cmbTipe.setSelectedItem(k.getTipe());
-        txtTarif.setText(String.valueOf(k.getTarifPerJam()));
+        perbaruiTarif();
         cmbStatus.setSelectedItem(k.getStatus());
         boolean dipakai = k.getStatus() == StatusKomputer.DIPAKAI;
         cmbStatus.setEnabled(!dipakai);
@@ -85,20 +91,33 @@ public class KomputerPanel extends javax.swing.JPanel implements DapatDimuatUlan
         txtNama.setText("");
         txtTarif.setText("");
         cmbTipe.setSelectedItem(TipeKomputer.REGULER);
+        perbaruiTarif();
         cmbStatus.setSelectedItem(StatusKomputer.TERSEDIA);
         cmbStatus.setEnabled(true);
         lblCatatan.setText(" ");
         txtNama.requestFocusInWindow();
     }
 
+    private int tarifUntukTipe(TipeKomputer tipe) {
+        return tipe == TipeKomputer.VIP ? TARIF_VIP : TARIF_REGULER;
+    }
+
+    private void perbaruiTarif() {
+        TipeKomputer tipe = (TipeKomputer) cmbTipe.getSelectedItem();
+        if (tipe != null) {
+            txtTarif.setText(String.valueOf(tarifUntukTipe(tipe)));
+        }
+    }
+
     private Komputer bacaForm(int id, StatusKomputer statusPaksa) throws WarnetException {
-        int tarif = Tampilan.parseAngka(txtTarif.getText(), "Tarif per jam");
+        TipeKomputer tipe = (TipeKomputer) cmbTipe.getSelectedItem();
+        int tarif = tarifUntukTipe(tipe);
         StatusKomputer status = statusPaksa != null ? statusPaksa : (StatusKomputer) cmbStatus.getSelectedItem();
         if (statusPaksa == null && status == StatusKomputer.DIPAKAI) {
             throw new DataTidakValidException("Status DIPAKAI diatur otomatis saat sesi dimulai. "
                     + "Pilih TERSEDIA atau RUSAK.");
         }
-        return new Komputer(id, txtNama.getText(), (TipeKomputer) cmbTipe.getSelectedItem(), tarif, status);
+        return new Komputer(id, txtNama.getText(), tipe, tarif, status);
     }
 
     private void tambah() throws WarnetException {
@@ -236,6 +255,7 @@ public class KomputerPanel extends javax.swing.JPanel implements DapatDimuatUlan
         gridBagConstraints.insets = new java.awt.Insets(5, 8, 5, 8);
         pnlForm.add(lblTarif, gridBagConstraints);
         txtTarif.setColumns(10);
+        txtTarif.setEditable(false);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 1;

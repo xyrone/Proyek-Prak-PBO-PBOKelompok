@@ -21,7 +21,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.function.Function;
 
+/** Kumpulan pembantu tampilan: warna, format teks, dialog pesan, dan gaya tabel. */
 final class Tampilan {
+
     static final Color BIRU = new Color(0x1F4E8C);
     static final Color BIRU_MUDA = new Color(0xE8F0FA);
     static final Color HIJAU = new Color(0x1B7F3B);
@@ -37,6 +39,7 @@ final class Tampilan {
     private Tampilan() {
     }
 
+    /** Aksi yang boleh melempar kesalahan aplikasi; kesalahannya ditampilkan sebagai dialog. */
     @FunctionalInterface
     interface Aksi {
         void jalankan() throws WarnetException;
@@ -63,6 +66,8 @@ final class Tampilan {
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION;
     }
 
+    // ---------- format teks ----------
+
     static String rupiah(int nilai) {
         return "Rp " + NumberFormat.getIntegerInstance(ID).format(nilai);
     }
@@ -75,13 +80,13 @@ final class Tampilan {
         return t == null ? "-" : t.format(JAM);
     }
 
-    static String durasi(int menit) {
-        int jam = menit / 60;
-        int sisa = menit % 60;
-        if (jam == 0) {
-            return sisa + " menit";
-        }
-        return sisa == 0 ? jam + " jam" : jam + " jam " + sisa + " menit";
+    static String lama(int jam) {
+        return jam + " jam";
+    }
+
+    /** Contoh: 5400 detik menjadi "1 jam 30 menit". */
+    static String lamaDetik(long detik) {
+        return latihan.warnetku.model.Sesi.formatLama(detik);
     }
 
     static String jamMenitDetik(Duration d) {
@@ -89,6 +94,7 @@ final class Tampilan {
         return String.format("%02d:%02d:%02d", detik / 3600, (detik % 3600) / 60, detik % 60);
     }
 
+    /** Mengubah teks seperti "5.000" atau "Rp 5000" menjadi angka bulat. */
     static int parseAngka(String teks, String namaField) throws DataTidakValidException {
         String bersih = teks == null ? "" : teks.replace("Rp", "").replace(".", "").replace(",", "").trim();
         if (bersih.isEmpty()) {
@@ -100,6 +106,8 @@ final class Tampilan {
             throw new DataTidakValidException(namaField + " harus berupa angka bulat");
         }
     }
+
+    // ---------- komponen ----------
 
     static JLabel judul(String teks) {
         JLabel l = new JLabel(teks);
@@ -120,6 +128,8 @@ final class Tampilan {
         return b;
     }
 
+    // ---------- tabel ----------
+
     static void rapikanTabel(JTable tabel, int... kolomKanan) {
         tabel.setRowHeight(28);
         tabel.setFillsViewportHeight(true);
@@ -135,6 +145,7 @@ final class Tampilan {
         }
     }
 
+    /** Sel tabel dengan garis belang, rata kiri/kanan, dan warna teks opsional per nilai. */
     static final class RenderTeks extends DefaultTableCellRenderer {
         private static final long serialVersionUID = 1L;
         private final int rata;

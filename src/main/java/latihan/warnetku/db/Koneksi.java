@@ -4,9 +4,17 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+/**
+ * Pengatur koneksi ke MySQL (singleton).
+ *
+ * Nilai bawaan cocok untuk Laragon (root, tanpa password). Untuk mengubahnya,
+ * edit konstanta di bawah, atau set environment variable
+ * WARNETKU_DB_URL, WARNETKU_DB_USER, WARNETKU_DB_PASSWORD.
+ */
 public final class Koneksi {
+
     private static final String URL_BAWAAN =
-            "jdbc:mysql://localhost:3306/warnetku";
+            "jdbc:mysql://localhost:3306/warnetku?useSSL=false&allowPublicKeyRetrieval=true";
     private static final String USER_BAWAAN = "root";
     private static final String PASSWORD_BAWAAN = "";
 
@@ -29,6 +37,7 @@ public final class Koneksi {
         return instance;
     }
 
+    /** Membuka koneksi baru. Pemanggil wajib menutupnya (try-with-resources / finally). */
     public Connection getConnection() throws SQLException {
         return DriverManager.getConnection(url, user, password);
     }
