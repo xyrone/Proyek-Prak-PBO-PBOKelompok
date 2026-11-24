@@ -2,13 +2,13 @@
 
 Proyek Praktikum Pemrograman Berorientasi Objek 2026.
 
-**Kelompok PartnerInCrime**
+**Kelompok PBO Kelompok**
 
 | Nama | NPM |
 |---|---|
-| Farrel Athariz Saffa | 140810250026 |
-| Jovanic Adriel Harjanto | 140810250050 |
-| Mochammad Ziyad Zayid Arully | 140810250065 |
+| Muhammad Hafidz Firdaus | 140810250018 |
+| Steven Immanuel Butarbutar | 140810250027 |
+| Rakhmat July Eldar Putra | 140810250066 |
 
 **Teknologi:** Java 17+, Swing, dan MySQL (Laragon) lewat JDBC (driver `mysql-connector-j`). Tidak memakai framework atau pustaka lain.
 
